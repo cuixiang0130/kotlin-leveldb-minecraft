@@ -1,0 +1,8 @@
+package = io.github.cuixiang0130.minecraft.leveldb
+
+headers = leveldb/c.h
+headerFilter = leveldb/c.h
+compilerOpts = -I./src/nativeInterop/include
+staticLibraries = libleveldb.a libzlib.a
+libraryPaths = ./runtime/native/mingw_x64
+noStringConversion = leveldb_get leveldb_put leveldb_delete leveldb_compact_range leveldb_writebatch_put leveldb_writebatch_delete leveldb_iter_seek

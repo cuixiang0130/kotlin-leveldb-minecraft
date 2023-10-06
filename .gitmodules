@@ -1,0 +1,7 @@
+[submodule "cpp/zlib"]
+	path = cpp/zlib
+	url = https://github.com/madler/zlib.git
+[submodule "cpp/leveldb-minecraft"]
+	path = cpp/leveldb-minecraft
+	url = https://github.com/cuixiang0130/leveldb-minecraft.git
+	branch = ci

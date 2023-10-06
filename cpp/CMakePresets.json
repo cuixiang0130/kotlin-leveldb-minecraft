@@ -1,0 +1,68 @@
+{
+    "version": 4,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 23,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "windows-x64",
+            "installDir": "${sourceParentDir}/out",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "cl",
+                "CMAKE_CXX_COMPILER": "cl",
+                "CMAKE_FIND_ROOT_PATH": "${sourceParentDir}/out"
+            }
+        },
+        {
+            "name": "linux-x64",
+            "installDir": "${sourceParentDir}/out",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
+                "CMAKE_FIND_ROOT_PATH": "${sourceParentDir}/out"
+            }
+        },
+        {
+            "name": "android-arm64-v8a",
+            "generator": "Ninja",
+            "installDir": "${sourceParentDir}/out",
+            "toolchainFile": "$env{NDK_HOME}/build/cmake/android.toolchain.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "ANDROID_PLATFORM":"android-23",
+                "ANDROID_ABI":"arm64-v8a",
+                "ANDROID_NDK": "$env{NDK_HOME}",
+                "CMAKE_FIND_ROOT_PATH": "${sourceParentDir}/out"
+            }
+        },
+        {
+            "name": "android-x86_64",
+            "generator": "Ninja",
+            "installDir": "${sourceParentDir}/out",
+            "toolchainFile": "$env{NDK_HOME}/build/cmake/android.toolchain.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "ANDROID_PLATFORM":"android-23",
+                "ANDROID_ABI":"x86_64",
+                "ANDROID_NDK": "$env{NDK_HOME}",
+                "CMAKE_FIND_ROOT_PATH": "${sourceParentDir}/out"
+            }
+        },
+        {
+            "name": "mingw_x64",
+            "generator": "Ninja",
+            "installDir": "${sourceParentDir}/out",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_FIND_ROOT_PATH": "${sourceParentDir}/out"
+            }
+        }
+    ]
+}

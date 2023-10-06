@@ -1,0 +1,143 @@
+name: "Build native libraries"
+
+on:
+  push:
+    branches: [ "main" ]
+    paths: 
+      - "cpp/**"
+      - ".github/workflows/build-native.yml"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "cpp/**"
+      - ".github/workflows/build-native.yml"
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+          - target: windows-x64
+            os: windows-latest
+          - target: linux-x64
+            os: ubuntu-latest
+          - target: android-arm64-v8a
+            os: ubuntu-latest
+          - target: android-x86_64
+            os: ubuntu-latest
+          - target: mingw_x64
+            os: windows-2019
+
+    defaults:
+      run:
+        working-directory: ./cpp
+
+    env:
+      ZLIB_BUILD_DIR: ${{ github.workspace }}/build/zlib
+      LEVELDB_BUILD_DIR: ${{ github.workspace }}/build/leveldb-minecraft
+      LEVELDB_JNI_BUILD_DIR: ${{ github.workspace }}/build/leveldb-minecraft-jni
+      
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+  
+    - name: Set environment variables for windows
+      if: ${{ matrix.os == 'windows-latest' || matrix.os == 'windows-2019' }}
+      run: |
+        echo "ZLIB_NAME=zlibstatic" >> "$GITHUB_ENV"
+        echo "LIB_PREFIX=" >> "$GITHUB_ENV"
+        echo "LIB_SUFFIX=dll" >> "$GITHUB_ENV"
+        echo "LIB_PATH=bin" >> "$GITHUB_ENV"
+      shell: bash
+
+    - name: Set environment variables for ubuntu
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      run: |
+        echo "ZLIB_NAME=z" >> "$GITHUB_ENV"
+        echo "LIB_PREFIX=lib" >> "$GITHUB_ENV"
+        echo "LIB_SUFFIX=so" >> "$GITHUB_ENV"
+        echo "LIB_PATH=lib" >> "$GITHUB_ENV"
+
+    - name: Setup Java
+      if: ${{ matrix.target == 'windows-x64' || matrix.target == 'linux-x64' }} 
+      uses: actions/setup-java@v3
+      with:
+        java-version: "17"
+        distribution: "temurin"
+
+    - name: Setup Android NDK
+      if: ${{ startsWith(matrix.target,'android') }}
+      uses: nttld/setup-ndk@v1
+      id: setup-ndk
+      with:
+        ndk-version: r25c
+        local-cache: true
+
+    - name: Set NDK_HOME
+      if: ${{ startsWith(matrix.target,'android') }}
+      run: echo "NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
+
+    - name: Setup Ninja
+      if: ${{ startsWith(matrix.target,'android') || matrix.target == 'mingw_x64' }}
+      uses: seanmiddleditch/gha-setup-ninja@master
+
+    - name: Copy CMakePresets
+      run: |
+        cp CMakePresets.json zlib/CMakePresets.json
+        cp CMakePresets.json leveldb-minecraft/CMakePresets.json
+        cp CMakePresets.json leveldb-minecraft-jni/CMakePresets.json
+
+    - name: Build zlib
+      run: |
+        cmake -S ./zlib -B ${{ env.ZLIB_BUILD_DIR }} --preset ${{ matrix.target }}
+        cmake --build ${{ env.ZLIB_BUILD_DIR }} --config Release
+        cmake --install ${{ env.ZLIB_BUILD_DIR }}
+
+    - name: Build leveldb-minecraft
+      run: |
+        cmake -S ./leveldb-minecraft -B ${{ env.LEVELDB_BUILD_DIR }} --preset ${{ matrix.target }}
+        cmake --build ${{ env.LEVELDB_BUILD_DIR }} --config Release
+        cmake --install ${{ env.LEVELDB_BUILD_DIR }}
+
+    - name: Copy native artifact
+      if: ${{ matrix.target == 'mingw_x64' }}
+      run: |
+        mkdir ./artifact-native
+        cp ./out/lib/lib${{ env.ZLIB_NAME }}.a ./artifact-native/lib${{ env.ZLIB_NAME }}.a
+        cp ./out/lib/libleveldb.a ./artifact-native/libleveldb.a
+
+    - name: Upload native artifact
+      if: ${{ matrix.target == 'mingw_x64' }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: leveldb-minecraft-native-${{ matrix.target }}
+        if-no-files-found: error
+        path: ${{ github.workspace }}/cpp/artifact-native/
+
+    - name: Build leveldb-minecraft-jni
+      if: ${{ matrix.target != 'mingw_x64' }}
+      run: |
+        cmake -S ./leveldb-minecraft-jni -B ${{ env.LEVELDB_JNI_BUILD_DIR }} --preset ${{ matrix.target }}
+        cmake --build ${{ env.LEVELDB_JNI_BUILD_DIR }} --config Release
+        cmake --install ${{ env.LEVELDB_JNI_BUILD_DIR }}
+
+    - name: Copy jni artifact
+      if: ${{ matrix.target != 'mingw_x64' }}
+      run: |
+        mkdir ./artifact-jni
+        cp ./out/${{ env.LIB_PATH }}/${{ env.LIB_PREFIX }}leveldb-jni.${{ env.LIB_SUFFIX }} ./artifact-jni/${{ env.LIB_PREFIX }}leveldb-minecraft-jvm-${{ matrix.target }}.${{ env.LIB_SUFFIX }}
+    
+    - name: Upload jni artifact
+      if: ${{ matrix.target != 'mingw_x64' }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: leveldb-minecraft-jvm-${{ matrix.target }}
+        if-no-files-found: error
+        path: ${{ github.workspace }}/cpp/artifact-jni/
